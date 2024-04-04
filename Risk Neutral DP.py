@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 def element_product(f_j):
     """Compute f[j] * log(f[j]) for a given f[j], handling f[j] = 0."""
@@ -22,13 +21,6 @@ def compute_bounds(f, v, beta_max, beta):
     
     mu_plus = ( np.max(v)-np.exp(beta-beta_max)* v_bar )/( 1-np.exp(beta-beta_max) )
     return mu_minus, mu_plus
-
-# def element_partial_derivative(f_j):
-#     """Compute f[j] * np.log ( (lambda_mu * f[j]) / (mu - v) ) for a given f[j], handling f[j] = 0."""
-#     if f_j > 0:
-#         return f_j * np.log ( (lambda_mu * f_j) / (mu - v) )
-#     else:
-#         return 0.0
 
 def derivative_support_function(f, v, mu, beta):
     """Compute the partial derivative of function h which is the decision key of the Bisection Algorithm."""
@@ -69,11 +61,10 @@ def main_or_intermediate(state, F_a1):
     else:
         return "Intermediate State"
 
-def Robust_Dynamic_Programming(X, A, F, C, c_N, N):
+def Risk_Neutral_DP(X, A, F, C, c_N, N):
     # Initialize value function for the final time step with terminal costs
     # Assign c_N to V
     V = c_N.copy()
-    # V = {i: c_N[i] for i in X}  # c_N is now directly a dictionary mapping states to terminal costs
     policy = {t: {i: None for i in X} for t in range(N)}  # Policy initialization
 
     # Loop over each time step in reverse
@@ -91,22 +82,25 @@ def Robust_Dynamic_Programming(X, A, F, C, c_N, N):
                     if np.all(f == 0):
                         continue
 
-                    epsilon = 1e-5
-                    beta_max = compute_beta_max(f)
-                    beta = beta_max - 0.3
-                    mu = bisection_algorithm(f, V_prev, beta_max, beta, epsilon)
-
-                    valid_indices = (mu - V != 0) & (f != 0)
-                    result = np.sum(f[valid_indices] / (mu - V[valid_indices]))
-                    if result == 0:
-                        lambda_mu = 0
-                    else:
-                        lambda_mu = 1 / result
+                    # Assign f times v to sigma
+                    sigma = np.dot(f, V_prev)
                     
-                    if lambda_mu == 0:
-                        sigma = mu
-                    else:
-                        sigma = mu - ( 1+beta ) * lambda_mu + lambda_mu * np.sum(f * np.log ( (lambda_mu * f) / (mu - V) ) )
+                    # epsilon = 1e-5
+                    # beta_max = compute_beta_max(f)
+                    # beta = beta_max - 0.3
+                    # mu = bisection_algorithm(f, V_prev, beta_max, beta, epsilon)
+
+                    # valid_indices = (mu - V != 0) & (f != 0)
+                    # result = np.sum(f[valid_indices] / (mu - V[valid_indices]))
+                    # if result == 0:
+                    #     lambda_mu = 0
+                    # else:
+                    #     lambda_mu = 1 / result
+                    
+                    # if lambda_mu == 0:
+                    #     sigma = mu
+                    # else:
+                    #     sigma = mu - ( 1+beta ) * lambda_mu + lambda_mu * np.sum(f * np.log ( (lambda_mu * f) / (mu - V) ) )
                     
                     action_cost = C[a][i] + sigma
                     action_costs[a] = action_cost
@@ -153,14 +147,32 @@ if __name__ == "__main__":
 
     
 
-    # Run the Robust Dynamic Programming algorithm
-    policy, V = Robust_Dynamic_Programming(X, A, F, C, c_N, N)
+    # Run the Risk Neutral Dynamic Programming algorithm
+    policy, V = Risk_Neutral_DP(X, A, F, C, c_N, N)
     
     print(policy)
     print(V)
 
+    # Initialize an empty DataFrame
+    df_policy = pd.DataFrame(index=X)
+
+    # Fill the DataFrame with the actions from the policy dictionary
+    for t in range(N):
+        for i in X:
+            df_policy.loc[i, t] = policy[t][i]
+
+    # Optionally, rename columns to be more descriptive (e.g., Stage 0, Stage 1, ...)
+    df_policy.columns = [f'Stage {col}' for col in df_policy.columns]
+
+    # Show the table
+    print(df_policy)
+
+    # If you prefer to export this table to a CSV file for use in other applications:
+    df_policy.to_csv('risk_neutral_policy_table.csv')
+
+
+
     # delta = 1e-5
-    
     # a0 = 'a0'
     # f = F[a0][0, :]
     # V = c_N.copy()

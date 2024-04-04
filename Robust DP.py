@@ -66,7 +66,6 @@ def Robust_Dynamic_Programming(X, A, F, C, c_N, N):
     # Initialize value function for the final time step with terminal costs
     # Assign c_N to V
     V = c_N.copy()
-    # V = {i: c_N[i] for i in X}  # c_N is now directly a dictionary mapping states to terminal costs
     policy = {t: {i: None for i in X} for t in range(N)}  # Policy initialization
 
     # Loop over each time step in reverse
@@ -86,7 +85,7 @@ def Robust_Dynamic_Programming(X, A, F, C, c_N, N):
 
                     epsilon = 1e-5
                     beta_max = compute_beta_max(f)
-                    beta = beta_max - 1.0
+                    beta = beta_max - 0.3
                     mu = bisection_algorithm(f, V_prev, beta_max, beta, epsilon)
 
                     valid_indices = (mu - V_prev != 0) & (f != 0)
